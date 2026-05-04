@@ -70,6 +70,8 @@ Each hypothesis must be **falsifiable**: state the prediction it makes.
 
 > Format: "If <X> is the cause, then <changing Y> will make the bug disappear / <changing Z> will make it worse."
 
+If the bug involves lifecycle, workflow, UI flow, entity state, or async process behavior, check whether an executable statechart exists. Consider hypotheses for a missing transition, invalid transition allowed, guard too broad/narrow, action firing in the wrong state, or an adapter bypassing the machine.
+
 If you cannot state the prediction, the hypothesis is a vibe — discard or sharpen it.
 
 **Show the ranked list to the user before testing.** They often have domain knowledge that re-ranks instantly ("we just deployed a change to #3"), or know hypotheses they've already ruled out. Cheap checkpoint, big time saver. Don't block on it — proceed with your ranking if the user is AFK.

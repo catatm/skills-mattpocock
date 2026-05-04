@@ -2,6 +2,8 @@
 
 Skills I use daily for code work.
 
+- **[executable-statecharts](./executable-statecharts/SKILL.md)** -- Design and maintain executable XState statecharts as the source of truth for stateful behavior.
+
 - **[diagnose](./diagnose/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[grill-with-docs](./grill-with-docs/SKILL.md)** — Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates `CONTEXT.md` and ADRs inline.
 - **[triage](./triage/SKILL.md)** — Triage issues through a state machine of triage roles.

@@ -40,6 +40,7 @@ Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't
 - Where are modules **shallow** — interface nearly as complex as the implementation?
 - Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
 - Where do tightly-coupled modules leak across their seams?
+- Where is stateful behavior scattered across conditionals, adapters, or duplicated state instead of concentrated in an executable statechart?
 - Which parts of the codebase are untested, or hard to test through their current interface?
 
 Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.

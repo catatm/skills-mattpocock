@@ -52,6 +52,7 @@ Before writing any code:
 - [ ] Confirm with user which behaviors to test (prioritize)
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
 - [ ] Design interfaces for [testability](interface-design.md)
+- [ ] For transition-heavy behavior, consider `/executable-statecharts` and write tests against the XState machine's public event/snapshot interface
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
 

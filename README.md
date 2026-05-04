@@ -144,6 +144,8 @@ Software engineering fundamentals matter more than ever. These skills are my bes
 
 Skills I use daily for code work.
 
+- **[executable-statecharts](./skills/engineering/executable-statecharts/SKILL.md)** -- Design and maintain executable XState statecharts as the source of truth for stateful behavior.
+
 - **[diagnose](./skills/engineering/diagnose/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[grill-with-docs](./skills/engineering/grill-with-docs/SKILL.md)** — Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates `CONTEXT.md` and ADRs inline.
 - **[triage](./skills/engineering/triage/SKILL.md)** — Triage issues through a state machine of triage roles.

@@ -49,6 +49,7 @@ A list of implementation decisions that were made. This can include:
 - The interfaces of those modules that will be modified
 - Technical clarifications from the developer
 - Architectural decisions
+- Stateful Models, when executable statecharts are relevant: which lifecycle or workflow will be represented by an XState machine, and that machine code is the source of truth
 - Schema changes
 - API contracts
 - Specific interactions
