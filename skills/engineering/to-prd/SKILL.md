@@ -49,12 +49,16 @@ A list of implementation decisions that were made. This can include:
 - The interfaces of those modules that will be modified
 - Technical clarifications from the developer
 - Architectural decisions
-- Stateful Models, when executable statecharts are relevant: which lifecycle or workflow will be represented by an XState machine, and that machine code is the source of truth
+- Stateful Models, when executable statecharts are relevant: an ownership inventory of lifecycles/workflows that should be represented by XState machines. This inventory tells future vertical slices which machine to extend; it does not mean every machine or state is implemented up front. Note that machine code is the source of truth.
 - Schema changes
 - API contracts
 - Specific interactions
 
 Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
+
+<stateful-models-example>
+- **Stateful Models**: Game Flow will be represented by a `GameFlowMachine` that owns menu, loading, playing, paused, and game-over lifecycle. This is an ownership inventory for future vertical slices; it does not require implementing every state up front. Machine code is the source of truth.
+</stateful-models-example>
 
 ## Testing Decisions
 

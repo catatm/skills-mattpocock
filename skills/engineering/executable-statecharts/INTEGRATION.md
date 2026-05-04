@@ -4,19 +4,20 @@ Executable statecharts compose with the other engineering skills. They do not re
 
 ## `/grill-with-docs`
 
-During grilling, look for stateful concepts:
+During grilling, look for stateful concepts and machine ownership:
 
 - What named states can this concept be in?
 - Which events cause transitions?
 - Which transitions are forbidden?
 - Which guards decide whether a transition is legal?
 - Which effects happen on entry, exit, or transition?
+- Which existing/planned owner machine should this concept belong to?
 
-Only add domain terms to `CONTEXT.md`. Do not add implementation details like XState event names unless domain experts use those names.
+Only add domain terms to `CONTEXT.md`. Do not add implementation details like XState event names unless domain experts use those names. Do not interrupt the grilling session to invoke this skill; apply the discovery questions inline and hand off after the current branch is resolved.
 
 ## `/to-prd`
 
-When executable statecharts are relevant, include them in **Implementation Decisions** under `Stateful Models`.
+When executable statecharts are relevant, include them in **Implementation Decisions** under `Stateful Models`. This is an ownership inventory, not a commitment to implement every machine up front.
 
 Example:
 
@@ -26,7 +27,7 @@ Example:
 
 ## `/to-issues`
 
-Vertical slices that touch stateful behavior should update the model, tests, and adapter wiring together.
+Vertical slices that touch stateful behavior should include a `## Stateful model` section. `/to-issues` owns writing the stateful issue details so `/tdd` has enough context to apply this skill without a separate manual invocation.
 
 Example:
 
@@ -34,6 +35,16 @@ Example:
 ## What to build
 
 Allow the Player to dash from Idle or Moving, enter Cooldown after the dash duration, and reject dash input during Cooldown.
+
+## Stateful model
+
+- **Owner machine**: PlayerMachine
+- **Owns**: Player control lifecycle
+- **Existing states/transitions**: Idle and Moving already exist
+- **This slice adds**: Dashing, Cooldown, dash pressed, dash duration elapsed, cooldown elapsed
+- **Out of scope**: Stunned and Dead
+- **Transition tests**: Idle/Moving -> Dashing, Dashing -> Cooldown, Cooldown rejects dash
+- **Adapter wiring**: Input adapter sends dash events; it does not own dash legality
 
 ## Acceptance criteria
 
@@ -44,7 +55,16 @@ Allow the Player to dash from Idle or Moving, enter Cooldown after the dash dura
 
 ## `/tdd`
 
-Use the statechart as a public behavior interface. Write the first failing transition test, make it pass, then wire the adapter.
+`/tdd` owns implementation. If an issue has a `## Stateful model` section or obvious transition-heavy behavior, apply this skill inline:
+
+1. Read the issue's stateful model section.
+2. Read [SKILL.md](SKILL.md).
+3. Read [VERTICAL-SLICES.md](VERTICAL-SLICES.md) only if machine ownership or slice boundaries are unclear.
+4. Write the first failing transition test.
+5. Implement the smallest machine change for the slice.
+6. Wire adapters after transition tests pass.
+
+Users should not need to manually invoke `/executable-statecharts` before every stateful `/tdd` issue.
 
 ## `/diagnose`
 

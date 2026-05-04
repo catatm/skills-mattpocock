@@ -28,6 +28,7 @@ Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an
 <vertical-slice-rules>
 - Each slice delivers a narrow but COMPLETE path through every layer (schema, API, UI, tests)
 - If the slice touches stateful behavior, include the executable statechart, transition tests, and adapter wiring in the same slice
+- Use any PRD `Stateful Models` inventory to assign the slice to an existing or planned owner machine. Do not create one machine per issue when slices should extend the same lifecycle owner.
 - A completed slice is demoable or verifiable on its own
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
@@ -70,6 +71,18 @@ A concise description of this vertical slice. Describe the end-to-end behavior, 
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
+
+## Stateful model
+
+Include only when this slice touches stateful behavior. Omit this section otherwise.
+
+- **Owner machine**:
+- **Owns**:
+- **Existing states/transitions**:
+- **This slice adds**:
+- **Out of scope**:
+- **Transition tests**:
+- **Adapter wiring**:
 
 ## Blocked by
 

@@ -67,7 +67,7 @@ When domain relationships are being discussed, stress-test them with specific sc
 
 ### Model stateful behavior
 
-When a concept has explicit states, ask about the legal states, forbidden transitions, triggering events, guards, and entry/exit effects. If the behavior is transition-heavy, recommend `/executable-statecharts` so the executable XState machine becomes the source of truth instead of a hand-maintained diagram.
+When a concept has explicit states, ask about the legal states, forbidden transitions, triggering events, guards, entry/exit effects, and which owner machine should contain the lifecycle. Apply `/executable-statecharts` discovery rules inline; do not interrupt the grilling session by telling the user to switch skills. Once the current branch is resolved, note whether this should become a `Stateful Models` entry for `/to-prd`.
 
 ### Cross-reference with code
 

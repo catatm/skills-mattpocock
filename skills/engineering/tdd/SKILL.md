@@ -56,6 +56,15 @@ Before writing any code:
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
 
+If the issue has a `## Stateful model` section, or the behavior is transition-heavy, apply `/executable-statecharts` inline:
+
+- Read `../executable-statecharts/SKILL.md`.
+- Read `../executable-statecharts/VERTICAL-SLICES.md` only if machine ownership or slice boundaries are unclear.
+- Write the first failing XState transition test before implementing the machine change.
+- Implement only the states, events, and transitions listed under "This slice adds".
+- Wire adapters only after transition tests pass.
+- Do not create Mermaid, SVG, Markdown, or generated-doc mirrors.
+
 Ask: "What should the public interface look like? Which behaviors are most important to test?"
 
 **You can't test everything.** Confirm with the user exactly which behaviors matter most. Focus testing effort on critical paths and complex logic, not every possible edge case.
