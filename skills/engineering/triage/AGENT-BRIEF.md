@@ -66,6 +66,12 @@ Be specific about edge cases and error conditions.
 - `functionName()` return type — what it currently returns vs what it should return
 - Config shape — any new configuration options needed
 
+**Ownership:** (include when the PRD or issue names lightweight ownership)
+- **Owner/lane:**
+- **Extends:**
+- **Must not own:**
+- **Adapter boundary:**
+
 **Stateful model:** (include only when this issue touches stateful behavior)
 - **Owner machine:**
 - **Current assumptions:**

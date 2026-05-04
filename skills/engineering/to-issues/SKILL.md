@@ -27,9 +27,11 @@ Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an
 
 <vertical-slice-rules>
 - Each slice delivers a narrow but COMPLETE path through every layer (schema, API, UI, tests)
+- Use any PRD `Lightweight Ownership` decisions to assign the slice to the right domain owner, deep module, or adapter lane. Do not create duplicate owners for the same behavior.
 - If the slice touches stateful behavior, include the executable statechart, transition tests, and adapter wiring in the same slice
 - Use any PRD `Stateful Models` inventory to assign the slice to an existing or planned owner machine. Do not create one machine per issue when slices should extend the same lifecycle owner.
 - If multiple slices touch the same owner machine, use `Blocked by` to sequence them unless their independence is explicit and defensible. Same-owner-machine slices are usually not AFK-parallel.
+- If multiple AFK slices touch the same non-stateful ownership lane and are likely to conflict semantically, sequence them with `Blocked by` instead of relying on the merge agent to reconcile design drift.
 - A completed slice is demoable or verifiable on its own
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
@@ -41,6 +43,7 @@ Present the proposed breakdown as a numbered list. For each slice, show:
 - **Title**: short descriptive name
 - **Type**: HITL / AFK
 - **Blocked by**: which other slices (if any) must complete first
+- **Ownership lane**: domain owner, deep module, adapter lane, or "Unclear"
 - **Stateful model touched**: owner machine name if the slice touches stateful behavior, otherwise "None"
 - **User stories covered**: which user stories this addresses (if the source material has them)
 
@@ -73,6 +76,15 @@ A concise description of this vertical slice. Describe the end-to-end behavior, 
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
+
+## Ownership
+
+Include when a PRD names `Lightweight Ownership` decisions relevant to this slice.
+
+- **Owner/lane**:
+- **Extends**:
+- **Must not own**:
+- **Adapter boundary**:
 
 ## Stateful model
 

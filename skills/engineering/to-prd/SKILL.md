@@ -48,6 +48,7 @@ A list of implementation decisions that were made. This can include:
 - The modules that will be built/modified
 - The interfaces of those modules that will be modified
 - Technical clarifications from the developer
+- Lightweight Ownership, when relevant: which domain concepts/modules own important behavior, which areas are adapters, and which ownership lanes future vertical slices should extend. Keep this broad; do not design all classes, methods, or files up front.
 - Architectural decisions
 - Stateful Models, when executable statecharts are relevant: an ownership inventory of lifecycles/workflows that should be represented by XState machines. This inventory tells future vertical slices which machine to extend; it does not mean every machine or state is implemented up front. Note that machine code is the source of truth.
 - Schema changes
@@ -59,6 +60,10 @@ Do NOT include specific file paths or code snippets. They may end up being outda
 <stateful-models-example>
 - **Stateful Models**: Game Flow will be represented by a `GameFlowMachine` that owns menu, loading, playing, paused, and game-over lifecycle. This is an ownership inventory for future vertical slices; it does not require implementing every state up front. Machine code is the source of truth.
 </stateful-models-example>
+
+<lightweight-ownership-example>
+- **Lightweight Ownership**: Run Simulation owns tick-level gameplay rules. Phaser scenes are adapters for rendering, input, audio, and lifecycle wiring. Future gameplay slices should extend Run Simulation instead of placing rules directly in Phaser scene code.
+</lightweight-ownership-example>
 
 ## Testing Decisions
 

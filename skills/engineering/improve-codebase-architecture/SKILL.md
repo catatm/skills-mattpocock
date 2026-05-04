@@ -7,6 +7,8 @@ description: Find deepening opportunities in a codebase, informed by the domain 
 
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
 
+Use this after real code exists. Do not treat it as a greenfield architecture generator. The useful signal is friction in working code: scattered knowledge, shallow modules, bad seams, missing test surfaces, duplicated ownership, and state drift.
+
 ## Glossary
 
 Use these terms exactly in every suggestion. Consistent language is the point — don't drift into "component," "service," "API," or "boundary." Full definitions in [LANGUAGE.md](LANGUAGE.md).
@@ -40,6 +42,8 @@ Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't
 - Where are modules **shallow** — interface nearly as complex as the implementation?
 - Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
 - Where do tightly-coupled modules leak across their seams?
+- Where has behavior drifted away from the ownership lanes recorded in the PRD or agent briefs?
+- Where did AFK slices create duplicate owners for the same behavior, concept, or adapter lane?
 - Where is stateful behavior scattered across conditionals, adapters, or duplicated state instead of concentrated in an executable statechart?
 - Where have independently implemented stateful slices created incompatible nested states, duplicate owner machines, or stale assumptions about an owner machine?
 - Which parts of the codebase are untested, or hard to test through their current interface?

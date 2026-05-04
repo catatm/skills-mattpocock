@@ -65,6 +65,17 @@ When the user uses vague or overloaded terms, propose a precise canonical term. 
 
 When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
 
+### Discover lightweight ownership
+
+When a concept implies behavior, ask which domain concept should own it. Keep this lightweight: identify ownership lanes for future work, not a full class/module design. Capture only domain terms in `CONTEXT.md`; implementation ownership belongs in the eventual PRD.
+
+Ask:
+
+- Which concept owns this behavior or decision?
+- Which concepts should only reference it, not mutate it?
+- Which behavior must stay together so future agents don't split it across shallow modules?
+- Which parts are adapters around a domain concept rather than the concept itself?
+
 ### Model stateful behavior
 
 When a concept has explicit states, ask about the legal states, forbidden transitions, triggering events, guards, entry/exit effects, and which owner machine should contain the lifecycle. Apply `/executable-statecharts` discovery rules inline; do not interrupt the grilling session by telling the user to switch skills. Once the current branch is resolved, note whether this should become a `Stateful Models` entry for `/to-prd`.
