@@ -60,6 +60,9 @@ If the issue has a `## Stateful model` section, or the behavior is transition-he
 
 - Read `../executable-statecharts/SKILL.md`.
 - Read `../executable-statecharts/VERTICAL-SLICES.md` only if machine ownership or slice boundaries are unclear.
+- Verify any `Blocked by` issues that affect the same owner machine are merged into the current base before coding.
+- Read the current owner machine code and treat the issue's `## Stateful model` section as a provisional delta, not immutable truth.
+- If the current machine has evolved, adapt "This slice adds" to the current shape. Stop and ask if the desired behavior no longer fits.
 - Write the first failing XState transition test before implementing the machine change.
 - Implement only the states, events, and transitions listed under "This slice adds".
 - Wire adapters only after transition tests pass.

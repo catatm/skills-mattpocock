@@ -34,6 +34,17 @@ The agent needs to know when it's done. Every agent brief must have concrete, te
 
 State what is out of scope. This prevents the agent from gold-plating or making assumptions about adjacent features.
 
+### Stateful model freshness
+
+If the issue has a `## Stateful model` section, treat it as a provisional delta, not immutable truth. The executable machine code is the source of truth.
+
+- Verify any `Blocked by` issues that touch the same owner machine have been merged into the current base
+- Read the current owner machine before implementing
+- Adapt the issue's desired delta to the current machine shape
+- Do not create a duplicate owner machine unless the brief explicitly asks for a new lifecycle owner
+- Include transition tests for the machine change
+- Stop and ask if the desired behavior no longer fits the current owner machine
+
 ## Template
 
 ```markdown
@@ -54,6 +65,14 @@ Be specific about edge cases and error conditions.
 - `TypeName` — what needs to change and why
 - `functionName()` return type — what it currently returns vs what it should return
 - Config shape — any new configuration options needed
+
+**Stateful model:** (include only when this issue touches stateful behavior)
+- **Owner machine:**
+- **Current assumptions:**
+- **This issue adds:**
+- **Out of scope:**
+- **Transition tests:**
+- **Adapter wiring:**
 
 **Acceptance criteria:**
 - [ ] Specific, testable criterion 1

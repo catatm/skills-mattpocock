@@ -29,6 +29,7 @@ Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an
 - Each slice delivers a narrow but COMPLETE path through every layer (schema, API, UI, tests)
 - If the slice touches stateful behavior, include the executable statechart, transition tests, and adapter wiring in the same slice
 - Use any PRD `Stateful Models` inventory to assign the slice to an existing or planned owner machine. Do not create one machine per issue when slices should extend the same lifecycle owner.
+- If multiple slices touch the same owner machine, use `Blocked by` to sequence them unless their independence is explicit and defensible. Same-owner-machine slices are usually not AFK-parallel.
 - A completed slice is demoable or verifiable on its own
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
@@ -40,6 +41,7 @@ Present the proposed breakdown as a numbered list. For each slice, show:
 - **Title**: short descriptive name
 - **Type**: HITL / AFK
 - **Blocked by**: which other slices (if any) must complete first
+- **Stateful model touched**: owner machine name if the slice touches stateful behavior, otherwise "None"
 - **User stories covered**: which user stories this addresses (if the source material has them)
 
 Ask the user:

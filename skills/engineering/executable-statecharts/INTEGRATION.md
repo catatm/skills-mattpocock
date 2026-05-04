@@ -29,6 +29,8 @@ Example:
 
 Vertical slices that touch stateful behavior should include a `## Stateful model` section. `/to-issues` owns writing the stateful issue details so `/tdd` has enough context to apply this skill without a separate manual invocation.
 
+If multiple slices touch the same owner machine, use `Blocked by` to sequence them unless their independence is explicit and defensible. Same-owner-machine slices are coordination lanes, not default parallel AFK work.
+
 Example:
 
 ```md
@@ -60,9 +62,11 @@ Allow the Player to dash from Idle or Moving, enter Cooldown after the dash dura
 1. Read the issue's stateful model section.
 2. Read [SKILL.md](SKILL.md).
 3. Read [VERTICAL-SLICES.md](VERTICAL-SLICES.md) only if machine ownership or slice boundaries are unclear.
-4. Write the first failing transition test.
-5. Implement the smallest machine change for the slice.
-6. Wire adapters after transition tests pass.
+4. Verify blockers for the same owner machine are merged into the current base.
+5. Read the current owner machine code and refresh the issue delta against reality.
+6. Write the first failing transition test.
+7. Implement the smallest machine change for the slice.
+8. Wire adapters after transition tests pass.
 
 Users should not need to manually invoke `/executable-statecharts` before every stateful `/tdd` issue.
 

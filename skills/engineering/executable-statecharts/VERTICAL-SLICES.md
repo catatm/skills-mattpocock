@@ -30,6 +30,39 @@ Implement narrowly:
 
 The same owner machine grows slice by slice.
 
+## AFK Agents and Worktrees
+
+Owner machines are coordination lanes. In an AFK workflow where each issue runs in its own worktree or branch, do not run multiple slices that touch the same owner machine in parallel by default.
+
+Good parallelism:
+
+```text
+Issue A touches GameFlowMachine.
+Issue B touches PlayerMachine.
+Issue C touches Settings.
+```
+
+Risky parallelism:
+
+```text
+Issue A touches GameFlowMachine.
+Issue B also touches GameFlowMachine.
+Issue C also touches GameFlowMachine.
+```
+
+Use the issue tracker's `Blocked by` field to serialize same-owner-machine slices unless the independence is explicit and defensible.
+
+## Refresh Before Implementation
+
+The issue's `## Stateful model` section is a provisional delta, not immutable truth. Before implementing a stateful slice, the agent must:
+
+1. Read the current owner machine code.
+2. Compare the issue's `Existing states/transitions` with reality.
+3. Adapt `This slice adds` to the current machine shape.
+4. Stop and ask if the issue's desired behavior no longer fits the current machine.
+
+Executable machine code is the source of truth. The issue describes the intended change.
+
 ## Example
 
 ### Slice 1: Start Game And Enter Play
@@ -82,6 +115,8 @@ This slice adds:
 
 - Does this slice extend an existing/planned owner machine?
 - Is a new machine justified, or is it fragmentation?
+- Are other open/parallel issues touching the same owner machine?
+- Should this slice be blocked by another same-owner-machine slice?
 - Are future states listed as out of scope instead of implemented now?
 - Are transition tests included in the same vertical slice?
 - Does adapter code send events instead of owning transition logic?
