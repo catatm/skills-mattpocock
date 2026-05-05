@@ -222,6 +222,17 @@ describe('Issues 006-008: Dash, Shield, and Combo Chain', () => {
     expect(game.snapshot().dash.state).toBe('ready')
   })
 
+  it('carries Dash active-window overflow into Dash Cooldown', () => {
+    const game = createGame()
+
+    game.start()
+    game.dash()
+    game.tick(DASH_DURATION_MS + 300)
+
+    expect(game.snapshot().dash.state).toBe('cooldown')
+    expect(game.snapshot().dash.remainingMs).toBe(DASH_COOLDOWN_MS - 300)
+  })
+
   it('uses Collision Resolution order: Invulnerability, Dash, Shield, then Hit', () => {
     const game = createGame()
 
@@ -311,6 +322,17 @@ describe('Issues 009-010: Wave pressure and Best Score persistence', () => {
     expect(game.snapshot().wave.hazardSpawnIntervalMs).toBeLessThanOrEqual(450)
   })
 
+  it('blocks Hazard Spawns during early Breather without freezing Pickup spawn cadence', () => {
+    const game = createGame({ random: sequence([0.8, 0.8, 0.2, 0.2]) })
+
+    game.start()
+    collideWithHazard(game, 90, 90)
+    game.tick(1_984)
+
+    expect(game.snapshot().wave.spawnBlockedMs).toBe(0)
+    expect(game.snapshot().pickups).toHaveLength(1)
+  })
+
   it('updates Best Score only after terminal Rounds and preserves it through restart', () => {
     const savedScores: number[] = []
     const storage = {
@@ -334,6 +356,37 @@ describe('Issues 009-010: Wave pressure and Best Score persistence', () => {
     game.restart()
     expect(game.snapshot().bestScore).toBe(20)
     expect(game.snapshot().score).toBe(0)
+  })
+})
+
+describe('Review fixes: public domain boundaries', () => {
+  it('rejects public Spawn attempts unless the Round is active', () => {
+    const game = createGame()
+
+    expect(game.attemptHazardSpawnAt({ x: 90, y: 90, radius: 24 })).toBe(false)
+    expect(game.attemptPickupSpawnAt({ x: 120, y: 90, radius: 14 }, 'normal')).toBe(
+      false,
+    )
+
+    game.start()
+    expect(game.attemptHazardSpawnAt({ x: 90, y: 90, radius: 24 })).toBe(true)
+    expect(game.attemptPickupSpawnAt({ x: 140, y: 90, radius: 14 }, 'normal')).toBe(
+      true,
+    )
+
+    game.pause()
+    expect(game.attemptHazardSpawnAt({ x: 220, y: 90, radius: 24 })).toBe(false)
+    expect(game.attemptPickupSpawnAt({ x: 260, y: 90, radius: 14 }, 'normal')).toBe(
+      false,
+    )
+
+    game.resume()
+    game.tick(game.snapshot().roundTimerMs)
+    expect(game.snapshot().roundState).toBe('won')
+    expect(game.attemptHazardSpawnAt({ x: 300, y: 90, radius: 24 })).toBe(false)
+    expect(game.attemptPickupSpawnAt({ x: 340, y: 90, radius: 14 }, 'normal')).toBe(
+      false,
+    )
   })
 })
 

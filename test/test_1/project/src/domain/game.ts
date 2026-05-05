@@ -373,9 +373,13 @@ export function createGame(options: GameOptions = {}) {
       state.dashState = 'dashing'
       state.dashRemainingMs = DASH_DURATION_MS
     },
-    attemptHazardSpawnAt: (circle: Circle) => spawnHazardAt(state, circle),
+    attemptHazardSpawnAt: (circle: Circle) => {
+      if (currentRoundState() !== 'active') return false
+
+      return spawnHazardAt(state, circle)
+    },
     attemptPickupSpawnAt: (circle: Circle, kind: PickupKind = 'normal') =>
-      spawnPickupAt(state, circle, kind),
+      currentRoundState() === 'active' && spawnPickupAt(state, circle, kind),
     tick: (deltaMs: number) => {
       const elapsedMs = Math.max(0, deltaMs)
 
@@ -532,13 +536,22 @@ function updatePlayerConditionTimers(state: GameInternals, elapsedMs: number): v
 function updateDashTimer(state: GameInternals, elapsedMs: number): void {
   if (state.dashState !== 'dashing' && state.dashState !== 'cooldown') return
 
+  const remainingBeforeTick = state.dashRemainingMs
+
   state.dashRemainingMs = Math.max(0, state.dashRemainingMs - elapsedMs)
 
   if (state.dashRemainingMs > 0) return
 
   if (state.dashState === 'dashing') {
+    const overflowMs = Math.max(0, elapsedMs - remainingBeforeTick)
+
     state.dashState = 'cooldown'
-    state.dashRemainingMs = DASH_COOLDOWN_MS
+    state.dashRemainingMs = Math.max(0, DASH_COOLDOWN_MS - overflowMs)
+
+    if (state.dashRemainingMs === 0) {
+      state.dashState = 'ready'
+    }
+
     return
   }
 
@@ -602,15 +615,13 @@ function updateSpawnCadence(
   random: () => number,
   elapsedMs: number,
 ): void {
-  if (state.breatherSpawnBlockedMs > 0) {
-    return
-  }
+  if (state.breatherSpawnBlockedMs === 0) {
+    state.hazardSpawnElapsedMs += elapsedMs
 
-  state.hazardSpawnElapsedMs += elapsedMs
-
-  while (state.hazardSpawnElapsedMs >= currentHazardSpawnInterval(state)) {
-    state.hazardSpawnElapsedMs -= currentHazardSpawnInterval(state)
-    spawnHazardAt(state, randomCircle(playArea, 24, random))
+    while (state.hazardSpawnElapsedMs >= currentHazardSpawnInterval(state)) {
+      state.hazardSpawnElapsedMs -= currentHazardSpawnInterval(state)
+      spawnHazardAt(state, randomCircle(playArea, 24, random))
+    }
   }
 
   state.pickupSpawnElapsedMs += elapsedMs

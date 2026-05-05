@@ -162,6 +162,8 @@ function readMovementInput(): MovementInput {
 }
 
 function render(snapshot: GameSnapshot): void {
+  canvas.dataset.playerX = snapshot.player.x.toFixed(1)
+  canvas.dataset.playerY = snapshot.player.y.toFixed(1)
   draw(snapshot)
   renderHud(snapshot)
   renderControls(snapshot)
