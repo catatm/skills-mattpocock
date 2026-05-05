@@ -130,6 +130,7 @@ type RoundEvent =
   | { type: 'PLAYER_HIT' }
   | { type: 'SCORE_ADDED'; score: number }
 
+type RoundActor = ReturnType<typeof createActor<ReturnType<typeof createRoundMachine>>>
 type MutableHazard = HazardSnapshot
 type MutablePickup = PickupSnapshot
 
@@ -165,6 +166,56 @@ type GameInternals = {
   persistedBestScore: number
 }
 
+type ActiveRoundFrameInput = {
+  state: GameInternals
+  playArea: PlayArea
+  random: () => number
+  roundActor: RoundActor
+  elapsedMs: number
+}
+
+type ActiveRoundFrameResult = {
+  shouldPersistBestScore: boolean
+}
+
+type WaveModel = {
+  state: WaveState
+  elapsedMs: number
+  breatherRemainingMs: number
+  spawnBlockedMs: number
+}
+
+type CollisionResolutionInput = {
+  invulnerable: boolean
+  dashing: boolean
+  shieldActive: boolean
+}
+
+type CollisionResolution = {
+  result: CollisionResult
+  effects: {
+    consumeShield: boolean
+    acceptHit: boolean
+    resolveHazard: boolean
+  }
+}
+
+type SafeSpawnOccupancy = {
+  player: Circle
+  activeHazards: Circle[]
+  availablePickups: Circle[]
+}
+
+type BestScorePersistenceInput = {
+  roundState: RoundState
+  bestScore: number
+  persistedBestScore: number
+}
+
+type BestScorePersistenceEffect =
+  | { type: 'none' }
+  | { type: 'save'; score: number }
+
 const defaultPlayArea: PlayArea = {
   width: 860,
   height: 520,
@@ -174,9 +225,8 @@ function browserBestScoreStorage(): BestScoreStorage {
   return {
     load: () => {
       const stored = globalThis.localStorage?.getItem('arcade-dodging-best-score')
-      const parsed = Number(stored)
 
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+      return parseStoredBestScore(stored)
     },
     save: (score) => {
       globalThis.localStorage?.setItem('arcade-dodging-best-score', String(score))
@@ -317,28 +367,22 @@ export function createGame(options: GameOptions = {}) {
   }).start()
   const state: GameInternals = createInitialInternals(playArea, loadedBestScore)
 
-  function currentRoundState(): RoundState {
-    return String(roundActor.getSnapshot().value) as RoundState
-  }
-
-  function currentRoundContext(): RoundContext {
-    return roundActor.getSnapshot().context
-  }
-
   function syncPersistedBestScore(): void {
-    const context = currentRoundContext()
+    const context = currentRoundContext(roundActor)
+    const effect = planBestScorePersistence({
+      roundState: currentRoundState(roundActor),
+      bestScore: context.bestScore,
+      persistedBestScore: state.persistedBestScore,
+    })
 
-    if (
-      isTerminalRoundState(currentRoundState()) &&
-      context.bestScore > state.persistedBestScore
-    ) {
-      state.persistedBestScore = context.bestScore
-      storage.save(context.bestScore)
-    }
+    if (effect.type === 'none') return
+
+    state.persistedBestScore = effect.score
+    storage.save(effect.score)
   }
 
   function resetTransientState(): void {
-    const reset = createInitialInternals(playArea, currentRoundContext().bestScore)
+    const reset = createInitialInternals(playArea, currentRoundContext(roundActor).bestScore)
 
     Object.assign(state, reset)
   }
@@ -346,7 +390,10 @@ export function createGame(options: GameOptions = {}) {
   return {
     start: () => {
       roundActor.send({ type: 'START' })
-      Object.assign(state, createInitialInternals(playArea, currentRoundContext().bestScore))
+      Object.assign(
+        state,
+        createInitialInternals(playArea, currentRoundContext(roundActor).bestScore),
+      )
       state.dashState = 'ready'
       state.waveState = 'opening'
     },
@@ -368,55 +415,42 @@ export function createGame(options: GameOptions = {}) {
       state.player.y = clamp(y, state.player.radius, playArea.height - state.player.radius)
     },
     dash: () => {
-      if (currentRoundState() !== 'active' || state.dashState !== 'ready') return
+      if (currentRoundState(roundActor) !== 'active' || state.dashState !== 'ready') return
 
       state.dashState = 'dashing'
       state.dashRemainingMs = DASH_DURATION_MS
     },
     attemptHazardSpawnAt: (circle: Circle) => {
-      if (currentRoundState() !== 'active') return false
+      if (currentRoundState(roundActor) !== 'active') return false
 
       return spawnHazardAt(state, circle)
     },
     attemptPickupSpawnAt: (circle: Circle, kind: PickupKind = 'normal') =>
-      currentRoundState() === 'active' && spawnPickupAt(state, circle, kind),
+      currentRoundState(roundActor) === 'active' && spawnPickupAt(state, circle, kind),
     tick: (deltaMs: number) => {
       const elapsedMs = Math.max(0, deltaMs)
 
       state.lastCollisionResults = []
 
-      if (currentRoundState() !== 'active' || elapsedMs === 0) return
+      if (currentRoundState(roundActor) !== 'active' || elapsedMs === 0) return
 
-      movePlayer(state, playArea, elapsedMs)
-      roundActor.send({ type: 'TICK', deltaMs: elapsedMs })
+      const result = advanceActiveRoundFrame({
+        state,
+        playArea,
+        random,
+        roundActor,
+        elapsedMs,
+      })
 
-      if (currentRoundState() === 'won') {
-        endRoundState(state)
-        syncPersistedBestScore()
-        return
-      }
-
-      updateWaveState(state, currentRoundContext().roundTimerMs, elapsedMs)
-      updatePlayerConditionTimers(state, elapsedMs)
-      updateDashTimer(state, elapsedMs)
-      updateShieldTimer(state, elapsedMs)
-      updateComboTimer(state, elapsedMs)
-      updateHazards(state, elapsedMs)
-      updatePickups(state, elapsedMs)
-      updateSpawnCadence(state, playArea, random, elapsedMs)
-      resolvePickupCollisions(state, roundActor)
-      resolveHazardCollisions(state, roundActor)
-
-      if (isTerminalRoundState(currentRoundState())) {
-        endRoundState(state)
+      if (result.shouldPersistBestScore) {
         syncPersistedBestScore()
       }
     },
     snapshot: (): GameSnapshot => {
-      const context = currentRoundContext()
+      const context = currentRoundContext(roundActor)
 
       return {
-        roundState: currentRoundState(),
+        roundState: currentRoundState(roundActor),
         roundTimerMs: context.roundTimerMs,
         playArea: { ...playArea },
         player: {
@@ -447,13 +481,72 @@ export function createGame(options: GameOptions = {}) {
         },
         wave: {
           state: state.waveState,
-          hazardSpawnIntervalMs: currentHazardSpawnInterval(state),
+          hazardSpawnIntervalMs: currentHazardSpawnInterval(readWaveModel(state)),
           spawnBlockedMs: state.breatherSpawnBlockedMs,
         },
         lastCollisionResults: [...state.lastCollisionResults],
       }
     },
   }
+}
+
+function advanceActiveRoundFrame({
+  state,
+  playArea,
+  random,
+  roundActor,
+  elapsedMs,
+}: ActiveRoundFrameInput): ActiveRoundFrameResult {
+  movePlayer(state, playArea, elapsedMs)
+  roundActor.send({ type: 'TICK', deltaMs: elapsedMs })
+
+  if (currentRoundState(roundActor) === 'won') {
+    endRoundState(state)
+
+    return { shouldPersistBestScore: true }
+  }
+
+  updateWaveState(state, currentRoundContext(roundActor).roundTimerMs, elapsedMs)
+  updatePlayerConditionTimers(state, elapsedMs)
+  updateDashTimer(state, elapsedMs)
+  updateShieldTimer(state, elapsedMs)
+  updateComboTimer(state, elapsedMs)
+  updateHazards(state, elapsedMs)
+  updatePickups(state, elapsedMs)
+  updateSpawnCadence(state, playArea, random, elapsedMs)
+  resolvePickupCollisions(state, roundActor)
+  resolveHazardCollisions(state, roundActor)
+
+  if (isTerminalRoundState(currentRoundState(roundActor))) {
+    endRoundState(state)
+
+    return { shouldPersistBestScore: true }
+  }
+
+  return { shouldPersistBestScore: false }
+}
+
+function currentRoundState(roundActor: RoundActor): RoundState {
+  return String(roundActor.getSnapshot().value) as RoundState
+}
+
+function currentRoundContext(roundActor: RoundActor): RoundContext {
+  return roundActor.getSnapshot().context
+}
+
+function planBestScorePersistence(
+  input: BestScorePersistenceInput,
+): BestScorePersistenceEffect {
+  if (!isTerminalRoundState(input.roundState)) return { type: 'none' }
+  if (input.bestScore <= input.persistedBestScore) return { type: 'none' }
+
+  return { type: 'save', score: input.bestScore }
+}
+
+function parseStoredBestScore(stored: string | null | undefined): number {
+  const parsed = Number(stored)
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
 }
 
 function createInitialInternals(playArea: PlayArea, bestScore: number): GameInternals {
@@ -615,11 +708,13 @@ function updateSpawnCadence(
   random: () => number,
   elapsedMs: number,
 ): void {
+  const wave = readWaveModel(state)
+
   if (state.breatherSpawnBlockedMs === 0) {
     state.hazardSpawnElapsedMs += elapsedMs
 
-    while (state.hazardSpawnElapsedMs >= currentHazardSpawnInterval(state)) {
-      state.hazardSpawnElapsedMs -= currentHazardSpawnInterval(state)
+    while (state.hazardSpawnElapsedMs >= currentHazardSpawnInterval(wave)) {
+      state.hazardSpawnElapsedMs -= currentHazardSpawnInterval(wave)
       spawnHazardAt(state, randomCircle(playArea, 24, random))
     }
   }
@@ -642,38 +737,81 @@ function updateWaveState(
   roundTimerMs: number,
   elapsedMs: number,
 ): void {
+  writeWaveModel(state, advanceWavePressure(readWaveModel(state), roundTimerMs, elapsedMs))
+}
+
+function advanceWavePressure(
+  wave: WaveModel,
+  roundTimerMs: number,
+  elapsedMs: number,
+): WaveModel {
   if (roundTimerMs <= FINAL_RUSH_REMAINING_MS) {
-    state.waveState = 'finalRush'
-    state.breatherRemainingMs = 0
-    state.breatherSpawnBlockedMs = 0
-    return
+    return {
+      ...wave,
+      state: 'finalRush',
+      breatherRemainingMs: 0,
+      spawnBlockedMs: 0,
+    }
   }
 
-  if (state.waveState === 'breather') {
-    state.breatherRemainingMs = Math.max(0, state.breatherRemainingMs - elapsedMs)
-    state.breatherSpawnBlockedMs = Math.max(0, state.breatherSpawnBlockedMs - elapsedMs)
+  if (wave.state === 'breather') {
+    const breatherRemainingMs = Math.max(0, wave.breatherRemainingMs - elapsedMs)
+    const spawnBlockedMs = Math.max(0, wave.spawnBlockedMs - elapsedMs)
 
-    if (state.breatherRemainingMs > 0) return
+    if (breatherRemainingMs > 0) {
+      return {
+        ...wave,
+        breatherRemainingMs,
+        spawnBlockedMs,
+      }
+    }
 
-    state.waveState = 'pressure'
-    return
+    return {
+      ...wave,
+      state: 'pressure',
+      breatherRemainingMs,
+      spawnBlockedMs,
+    }
   }
 
-  state.waveElapsedMs += elapsedMs
+  const elapsedWaveMs = wave.elapsedMs + elapsedMs
 
-  if (state.waveState === 'pressure') return
+  if (wave.state === 'pressure') {
+    return {
+      ...wave,
+      elapsedMs: elapsedWaveMs,
+    }
+  }
 
-  if (state.waveElapsedMs < 10_000) {
-    state.waveState = 'opening'
-  } else if (state.waveElapsedMs < 30_000) {
-    state.waveState = 'rising'
-  } else {
-    state.waveState = 'pressure'
+  if (elapsedWaveMs < 10_000) {
+    return {
+      ...wave,
+      state: 'opening',
+      elapsedMs: elapsedWaveMs,
+    }
+  }
+
+  if (elapsedWaveMs < 30_000) {
+    return {
+      ...wave,
+      state: 'rising',
+      elapsedMs: elapsedWaveMs,
+    }
+  }
+
+  return {
+    ...wave,
+    state: 'pressure',
+    elapsedMs: elapsedWaveMs,
   }
 }
 
 function spawnHazardAt(state: GameInternals, circle: Circle): boolean {
-  if (!isSafeSpawn(circle, state, { includePickups: false })) return false
+  if (
+    !isSafeSpawn(circle, readSafeSpawnOccupancy(state), { includePickups: false })
+  ) {
+    return false
+  }
 
   state.hazards.push({
     ...circle,
@@ -692,7 +830,11 @@ function spawnPickupAt(
   circle: Circle,
   kind: PickupKind,
 ): boolean {
-  if (!isSafeSpawn(circle, state, { includePickups: true })) return false
+  if (
+    !isSafeSpawn(circle, readSafeSpawnOccupancy(state), { includePickups: true })
+  ) {
+    return false
+  }
 
   state.pickups.push({
     ...circle,
@@ -708,7 +850,7 @@ function spawnPickupAt(
 
 function resolvePickupCollisions(
   state: GameInternals,
-  roundActor: ReturnType<typeof createActor<ReturnType<typeof createRoundMachine>>>,
+  roundActor: RoundActor,
 ): void {
   for (const pickup of state.pickups) {
     if (pickup.state !== 'available' || !circlesOverlap(state.player, pickup)) continue
@@ -739,46 +881,97 @@ function calculatePickupScore(state: GameInternals): number {
 
 function resolveHazardCollisions(
   state: GameInternals,
-  roundActor: ReturnType<typeof createActor<ReturnType<typeof createRoundMachine>>>,
+  roundActor: RoundActor,
 ): void {
   for (const hazard of state.hazards) {
     if (hazard.state !== 'active' || !circlesOverlap(state.player, hazard)) continue
 
-    const result = resolveHazardCollision(state)
+    const resolution = resolveHazardCollision(readCollisionResolutionInput(state))
 
-    state.lastCollisionResults.push(result)
-
-    if (result === 'hit_accepted') {
-      state.invulnerabilityRemainingMs = INVULNERABILITY_DURATION_MS
-      hazard.state = 'resolved'
-      enterBreather(state)
-      roundActor.send({ type: 'PLAYER_HIT' })
-    } else if (result === 'hit_blocked_shield' || result === 'hit_avoided_dash') {
-      hazard.state = 'resolved'
-    }
+    state.lastCollisionResults.push(resolution.result)
+    applyCollisionResolutionEffects(state, hazard, roundActor, resolution)
   }
 }
 
-function resolveHazardCollision(state: GameInternals): CollisionResult {
-  if (state.invulnerabilityRemainingMs > 0) return 'hit_ignored_invulnerable'
-  if (state.dashState === 'dashing') return 'hit_avoided_dash'
+function readCollisionResolutionInput(state: GameInternals): CollisionResolutionInput {
+  return {
+    invulnerable: state.invulnerabilityRemainingMs > 0,
+    dashing: state.dashState === 'dashing',
+    shieldActive: state.shieldState === 'active',
+  }
+}
 
-  if (state.shieldState === 'active') {
+function applyCollisionResolutionEffects(
+  state: GameInternals,
+  hazard: MutableHazard,
+  roundActor: RoundActor,
+  resolution: CollisionResolution,
+): void {
+  if (resolution.effects.consumeShield) {
     state.shieldState = 'consumed'
     state.shieldRemainingMs = 0
-
-    return 'hit_blocked_shield'
   }
 
-  return 'hit_accepted'
+  if (resolution.effects.resolveHazard) {
+    hazard.state = 'resolved'
+  }
+
+  if (!resolution.effects.acceptHit) return
+
+  state.invulnerabilityRemainingMs = INVULNERABILITY_DURATION_MS
+  enterBreather(state)
+  roundActor.send({ type: 'PLAYER_HIT' })
+}
+
+function resolveHazardCollision(input: CollisionResolutionInput): CollisionResolution {
+  if (input.invulnerable) {
+    return collisionResolution('hit_ignored_invulnerable')
+  }
+
+  if (input.dashing) {
+    return collisionResolution('hit_avoided_dash', { resolveHazard: true })
+  }
+
+  if (input.shieldActive) {
+    return collisionResolution('hit_blocked_shield', {
+      consumeShield: true,
+      resolveHazard: true,
+    })
+  }
+
+  return collisionResolution('hit_accepted', {
+    acceptHit: true,
+    resolveHazard: true,
+  })
+}
+
+function collisionResolution(
+  result: CollisionResult,
+  effects: Partial<CollisionResolution['effects']> = {},
+): CollisionResolution {
+  return {
+    result,
+    effects: {
+      consumeShield: effects.consumeShield ?? false,
+      acceptHit: effects.acceptHit ?? false,
+      resolveHazard: effects.resolveHazard ?? false,
+    },
+  }
 }
 
 function enterBreather(state: GameInternals): void {
-  if (state.waveState === 'finalRush') return
+  writeWaveModel(state, enterBreatherWave(readWaveModel(state)))
+}
 
-  state.waveState = 'breather'
-  state.breatherRemainingMs = BREATHER_DURATION_MS
-  state.breatherSpawnBlockedMs = 1_000
+function enterBreatherWave(wave: WaveModel): WaveModel {
+  if (wave.state === 'finalRush') return wave
+
+  return {
+    ...wave,
+    state: 'breather',
+    breatherRemainingMs: BREATHER_DURATION_MS,
+    spawnBlockedMs: 1_000,
+  }
 }
 
 function endRoundState(state: GameInternals): void {
@@ -798,36 +991,42 @@ function endRoundState(state: GameInternals): void {
 
 function isSafeSpawn(
   circle: Circle,
-  state: GameInternals,
+  occupancy: SafeSpawnOccupancy,
   options: { includePickups: boolean },
 ): boolean {
-  if (circlesOverlap(circle, state.player)) return false
+  if (circlesOverlap(circle, occupancy.player)) return false
 
-  const overlapsHazard = state.hazards.some(
-    (hazard) => hazard.state === 'active' && circlesOverlap(circle, hazard),
+  const overlapsHazard = occupancy.activeHazards.some((hazard) =>
+    circlesOverlap(circle, hazard),
   )
 
   if (overlapsHazard) return false
 
   return (
     !options.includePickups ||
-    !state.pickups.some(
-      (pickup) => pickup.state === 'available' && circlesOverlap(circle, pickup),
-    )
+    !occupancy.availablePickups.some((pickup) => circlesOverlap(circle, pickup))
   )
+}
+
+function readSafeSpawnOccupancy(state: GameInternals): SafeSpawnOccupancy {
+  return {
+    player: state.player,
+    activeHazards: state.hazards.filter((hazard) => hazard.state === 'active'),
+    availablePickups: state.pickups.filter((pickup) => pickup.state === 'available'),
+  }
 }
 
 function isCircleSafeForActiveHazard(hazard: Circle, state: GameInternals): boolean {
   return !circlesOverlap(hazard, state.player)
 }
 
-function currentHazardSpawnInterval(state: GameInternals): number {
-  if (state.waveState === 'finalRush') return MIN_HAZARD_SPAWN_INTERVAL_MS
-  if (state.waveState === 'breather') return 1_600
-  if (state.waveState === 'pressure') return 700
+function currentHazardSpawnInterval(wave: WaveModel): number {
+  if (wave.state === 'finalRush') return MIN_HAZARD_SPAWN_INTERVAL_MS
+  if (wave.state === 'breather') return 1_600
+  if (wave.state === 'pressure') return 700
 
-  if (state.waveState === 'rising') {
-    const progress = clamp((state.waveElapsedMs - 10_000) / 20_000, 0, 1)
+  if (wave.state === 'rising') {
+    const progress = clamp((wave.elapsedMs - 10_000) / 20_000, 0, 1)
 
     return Math.max(
       MIN_HAZARD_SPAWN_INTERVAL_MS,
@@ -836,6 +1035,22 @@ function currentHazardSpawnInterval(state: GameInternals): number {
   }
 
   return HAZARD_SPAWN_INTERVAL_MS
+}
+
+function readWaveModel(state: GameInternals): WaveModel {
+  return {
+    state: state.waveState,
+    elapsedMs: state.waveElapsedMs,
+    breatherRemainingMs: state.breatherRemainingMs,
+    spawnBlockedMs: state.breatherSpawnBlockedMs,
+  }
+}
+
+function writeWaveModel(state: GameInternals, wave: WaveModel): void {
+  state.waveState = wave.state
+  state.waveElapsedMs = wave.elapsedMs
+  state.breatherRemainingMs = wave.breatherRemainingMs
+  state.breatherSpawnBlockedMs = wave.spawnBlockedMs
 }
 
 function randomCircle(playArea: PlayArea, radius: number, random: () => number): Circle {
